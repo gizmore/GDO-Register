@@ -19,7 +19,8 @@ class GDO::Register::Method::Activate < GDO::Method::Base
   end
   
   def activation(activation)
-    
+    success(t(:msg_activated))
+
   end
   
 end

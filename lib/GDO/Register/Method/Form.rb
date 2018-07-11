@@ -18,6 +18,7 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
     form.add_field(::GDO::User::GDT_Username.new(:user_name).not_null)
     form.add_field(::GDO::Form::GDT_Validator.new.validator(:user_name, self, 'validate_unique_ip'))
     form.add_field(::GDO::Form::GDT_Validator.new.validator(:user_name, self, 'validate_unique_username'))
+
     form.add_field(::GDO::Form::GDT_Password.new(:user_password).not_null)
     
     if mod.cfg_email_activation
@@ -82,31 +83,20 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
   def execute_submit(form)
     mod = ::GDO::Register::Module.instance
     
+    byebug
     # TODO: GDT_Password should know it comes from form for a save... b 
 #    $password = $form->getField('user_password');
 #    $password->val(BCrypt::create($password->getVar())->__toString());
 
     activation = ::GDO::Register::GDO::UserActivation.blank(form.get_form_data)
-    activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP::current)
+    activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP.current)
     activation.save
     
     if mod.cfg_email_activation
       email_activation(activation)
     else
-      
+      ::GDO::Register::Method::Activate.new.activation(activation)
     end
-#     
-    # if ($module->cfgEmailActivation())
-    # {
-      # return $this->onEmailActivation($activation);
-    # }
-    # else
-    # {
-      # return Activate::make()->activate($activation->getID(), $activation->getToken());
-    # }
-
-    
-    
   end
   
   def email_activation(activation)

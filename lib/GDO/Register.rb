@@ -1,4 +1,4 @@
-require "gdo"
+require "GDO"
 #
 # Provides basic authentification.
 #
