@@ -1,83 +1,121 @@
 #
-# Login Form.
-# Basic password authentification.
+# Basic on site registration
 #
 # @version 1.00
 # @since 1.00
 # @license MIT
 # @author gizmore@wechall.net
 #
-class GDO::Login::Method::Form < ::GDO::Method::Form
+class GDO::Register::Method::Form < ::GDO::Method::Form
   
   #
   # Decorate form for the method.
   # @see GDO::Method::Form
   #
   def form(form)
-    form.add_field ::GDO::DB::GDT_String.make('login').not_null # login is either email or username
-    form.add_field ::GDO::Form::GDT_Password.make('password').not_null
-    form.add_field ::GDO::Form::GDT_Submit.make
-    form.add_field ::GDO::Form::GDT_CSRF.make
+    mod = ::GDO::Register::Module.instance
+    
+    form.add_field(::GDO::User::GDT_Username.new(:user_name).not_null)
+    form.add_field(::GDO::Form::GDT_Validator.new.validator(:user_name, self, 'validate_unique_ip'))
+    form.add_field(::GDO::Form::GDT_Validator.new.validator(:user_name, self, 'validate_unique_username'))
+    form.add_field(::GDO::Form::GDT_Password.new(:user_password).not_null)
+    
+    if mod.cfg_email_activation
+      form.add_field(::GDO::Mail::GDT_Email.new(:user_email).not_null);
+      form.add_field(::GDO::Form::GDT_Validator.new.validator(:user_email, self, 'validate_unique_email'))
+    end
+    
+    if mod.cfg_tos
+      form.add_field ::GDO::DB::GDT_Boolean.new(:tos).label(t(:tos_label, mod.cfg_tos_url)).not_null
+      form.add_field(::GDO::Form::GDT_Validator.new.validator(:tos, self, 'validate_tos'))
+    end
+    
+    if mod.cfg_captcha
+      form.add_field ::GDO::Captcha::GDT_Captcha.new
+    end
+    
+    form.add_field ::GDO::Form::GDT_Submit.new.label(t(:btn_register))
+    form.add_field ::GDO::Form::GDT_CSRF.new
+
   end
   
+  ##################
+  ### Validators ###
+  ##################
+  def validate_unique_ip(form, gdt)
+    mod = ::GDO::Register::Module.instance
+    max = mod.cfg_ip_signup_max
+    return true if max <= 0
+    ip = quote(::GDO::Net::GDT_IP.current)
+    cut = Time.new - mod.cfg_ip_timeout
+    count = ::GDO::User::GDO_User.table.count_where("user_register_ip=#{$ip} AND user_register_time>#{$cut}")
+    count < max ? true : gdt.error(t(:err_ip_signup_max_reached, max))
+  end
+
+  def validate_unique_username(form, gdt)
+    user = ::GDO::User::GDO_User.find_by_name(gdt._var)
+    user == nil ? true : gdt.error(t(:err_username_taken))
+  end
+
+  def validate_unique_email(form, gdt)
+    count = ::GDO::User::GDO_User::table.count_where("user_email=#{quote(gdt._val)}")
+    count == 0 ? true : gdt.error(t(:err_email_taken))
+  end
+
+  def validate_tos(form, gdt)
+    gdt._value ? true : gdt.error(t(:err_tos_not_accepted))
+  end
+  
+  ###############
+  ### Actions ###
+  ###############
+  # Add extra message on errors
+  def form_invalid(form)
+    # error(t(:err_register_failure))
+    super
+  end
+
   #
   # Submit button handling
   # @see GDO::Method::Form
   #
-  def execute_submit
-    # Bruteforce protection!
-    ban_check
-    # Parameters
-    login = parameter(:login)._var
-    password = parameter(:password)._var
-    # Unknown user?
-    user = ::GDO::User::GDO_User.table.get_by_login(login)
-    return login_failure(user) if user.nil?
-    # Wrong password?
-    return login_failure(user) unless user.column(:user_password).validate_password(password)
-    # All fine!
-    return login_success(user)
-  end
-  
-  def login_success(user)
-    ::GDO::User::GDO_User.current = user
-    publish(:gdo_user_authenticated, user)
-    ::GDO::Method::GDT_Response.make_with(
-      ::GDO::UI::GDT_Success.make.text(t(:msg_authenticated))
-    )
-  end
-  
-  #################
-  ### Ban Check ###
-  #################
-  def ban_cut; (::Time.now - ban_timeout).to_i; end
-  def ban_tries; ::GDO::Login::Module.instance.cfg_tries; end
-  def ban_timeout; ::GDO::Login::Module.instance.cfg_timeout; end
-  def ban_check
-    ban_data = self.ban_data
-    num_tries = ban_data[1].to_i
-    if num_tries >= ban_tries
-      time_left = (Time.now - ban_data[0].to_i).to_i
-      raise ::GDO::Login::LoginsExceededException.new(t(:err_login_tries_exceeded, ban_tries, tt(time_left)))
+  def execute_submit(form)
+    mod = ::GDO::Register::Module.instance
+    
+    # TODO: GDT_Password should know it comes from form for a save... b 
+#    $password = $form->getField('user_password');
+#    $password->val(BCrypt::create($password->getVar())->__toString());
+
+    activation = ::GDO::Register::GDO::UserActivation.blank(form.get_form_data)
+    activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP::current)
+    activation.save
+    
+    if mod.cfg_email_activation
+      email_activation(activation)
+    else
+      
     end
-  end
-  def ban_data
-    ip = ::GDO::Net::GDT_IP.current
-    result = ::GDO::Login::GDO_LoginAttempts.table.
-     select('UNIX_TIMESTAMP(MIN(la_created)), COUNT(*)').
-     where("la_ip=#{quote(ip)} AND la_created>FROM_UNIXTIME(#{quote(ban_cut)})").
-     execute.fetch_row
-     
+#     
+    # if ($module->cfgEmailActivation())
+    # {
+      # return $this->onEmailActivation($activation);
+    # }
+    # else
+    # {
+      # return Activate::make()->activate($activation->getID(), $activation->getToken());
+    # }
+
+    
+    
   end
   
-  ###############
-  ### Failure ###
-  ###############
-  def login_failure(user=nil)
-    # insert attempt
-    ::GDO::Login::GDO_LoginAttempts.table.login_failure(user)
-    # raise exception
-    raise ::GDO::Login::LoginException.new
+  def email_activation(activation)
+    mail = ::GDO::Mail::Envelope.new
+    mail.subject(t(:mail_activate_title, sitename))
+    mail.body(t(:mail_activate_body, activation._username, sitename, activation._url))
+    mail.receiver(activation._email)
+    mail.send_as_html
+    success(t(:msg_activation_mail_sent))
   end
   
 end
