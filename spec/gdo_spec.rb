@@ -2,31 +2,6 @@ require "byebug"
 require "mysql2"
 require "GDO/Register"
 
-class Object
-  # request helper
-  def first_gdo_request(query={})
-    cookie = ::GDO::User::GDO_Session::MAGIC_VALUE
-    gdo_request("GET", query, cookie)
-  end
-  def next_gdo_request(method, query={})
-    cookie = ::GDO::Core::Application.cookie(::GDO::User::GDO_Session::COOKIE_NAME)
-    gdo_request(method, query, "gdor=#{cookie}")
-  end
-  def gdo_request(method, query, cookie)
-    query_string = ""
-    query.each do |k,v|
-      query_string += "&" unless query_string.empty?
-      query_string += "#{k}=#{URI::encode(v)}"
-    end
-    env = {
-      "METHOD" => method,
-      "QUERY_STRING" => query_string,
-      'COOKIE' => "gdor=#{cookie}",
-    }
-    ::GDO::Core::Application.call(env)
-  end
-end
-
 RSpec.describe ::GDO::Register do
   
  it "can switch to bot language" do
@@ -58,7 +33,7 @@ RSpec.describe ::GDO::Register do
   end
   
   it "does display a register form" do
-    code, headers, page = first_gdo_request(mo: "Register", me: "Form")
+    code, headers, page = ::GDO::Test::Helper.first_gdo_request(mo: "Register", me: "Form")
     response = ::GDO::Core::Application.response
     expect(response._fields[0]).to be_a(::GDO::Form::GDT_Form) # the response is just a form
     expect(response._fields[0]._fields.length >= 4).to be_truthy # with at least 4 fields
@@ -66,7 +41,7 @@ RSpec.describe ::GDO::Register do
   end
   
   it "can succeed at registration" do
-    code, headers, page = next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer", user_password:"11111111", user_email: "lazer@gizmore.org", tos: "1", submit:"Submit")
+    code, headers, page = ::GDO::Test::Helper.next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer", user_password:"11111111", user_email: "lazer@gizmore.org", tos: "1", submit:"Submit")
     response = ::GDO::Core::Application.response
     expect(code).to eq(200)
     expect(response._fields[0]).to be_a(::GDO::UI::GDT_Success) # the response is a success message!
@@ -77,15 +52,23 @@ RSpec.describe ::GDO::Register do
   end
   
   it "cannot register twice with the same data" do
-    code, headers, page = next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer", user_password:"11111111", user_email: "lazer@gizmore.org", tos: "1", submit:"Submit")
+    code, headers, page = ::GDO::Test::Helper.next_gdo_request("POST",
+      mo: "Register",
+      me: "Form",
+      user_name: "Lazer",
+      user_password:"11111111",
+      user_email: "lazer@gizmore.org",
+      tos: "1",
+      submit:"Submit")
     response = ::GDO::Core::Application.response
+
     expect(code).to eq(200)
     form = response._fields[0]
     expect(form.has_errors?).to be(true)
   end
   
   it "can force accepting tos" do
-    code, headers, page = next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer2", user_password:"11111111", user_email: "lazer2@gizmore.org", tos: "0", submit:"Submit")
+    code, headers, page = ::GDO::Test::Helper.next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer2", user_password:"11111111", user_email: "lazer2@gizmore.org", tos: "0", submit:"Submit")
     response = ::GDO::Core::Application.response
     form = response._fields[0]
     expect(code).to eq(200)
@@ -94,11 +77,10 @@ RSpec.describe ::GDO::Register do
   end
   
   it "can exceed max signup ip count" do
-    code, headers, page = next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer2", user_password:"11111111", user_email: "lazer2@gizmore.org", tos: "0", submit:"Submit")
+    code, headers, page = ::GDO::Test::Helper.next_gdo_request("POST", mo: "Register", me: "Form", user_name: "Lazer2", user_password:"11111111", user_email: "lazer2@gizmore.org", tos: "0", submit:"Submit")
     response = ::GDO::Core::Application.response
     form = response._fields[0]
     expect(form.field(:user_name).has_error?).to be(true)
-    
   end
 
 end
