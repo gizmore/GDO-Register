@@ -80,15 +80,12 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
 
     password = form.field(:user_password)
     password.var(GDO::Crypto::GDT_PasswordHash.hash(password._var))
-    byebug
-
     activation = ::GDO::Register::GDO_UserActivation.blank(form.get_vars)
-    byebug
+    activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP.current)
+    activation.save
     
     publish(:gdo_user_signup, activation)
 
-    activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP.current)
-    activation.save
     if mod.cfg_admin_activation
       admin_activation(activation)
     elsif mod.cfg_email_activation

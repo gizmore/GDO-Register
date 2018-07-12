@@ -36,6 +36,7 @@ class GDO::Register::GDO_SignupIP < GDO::Core::GDO
   
   # Hook into activation
   subscribe(:gdo_user_activation, :gdo_activation_ip_collection) do |user, activation|
+    ::GDO::Core::Log.info("Logged activation IP")
     blank(
       :sip_uid => user.id,
       :sip_ip => ::GDO::Net::GDT_IP.current,

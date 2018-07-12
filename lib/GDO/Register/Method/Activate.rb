@@ -33,7 +33,7 @@ class GDO::Register::Method::Activate < GDO::Method::Base
     success(t(:msg_activated))
     
     # Event
-    publish(:gdo_user_activate, user)
+    publish(:gdo_user_activation, user, activation)
 
   end
   

@@ -21,7 +21,6 @@ class GDO::Register::GDO_UserActivation < GDO::Core::GDO
   def _username
     get_value(:user_name)
   end
-  
   subscribe(:gdo_user_activation, :gdo_activation_cleanup) do |user, activation|
     table.delete_where("user_name=#{activation.quoted(:user_name)} OR user_email=#{activation.quoted(:user_email)}")
   end
