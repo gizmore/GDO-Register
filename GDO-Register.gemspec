@@ -23,6 +23,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "byebug", "~> 10.0"
 
-  spec.add_dependency "gdo", "~> 1.0"
+  spec.add_dependency "GDO", "~> 1"
 
 end

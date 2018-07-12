@@ -44,22 +44,17 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
   ### Validators ###
   ##################
   def validate_unique_ip(form, gdt)
-    mod = ::GDO::Register::Module.instance
-    max = mod.cfg_ip_signup_max
-    return true if max <= 0
-    ip = quote(::GDO::Net::GDT_IP.current)
-    cut = Time.new - mod.cfg_ip_timeout
-    count = ::GDO::User::GDO_User.table.count_where("user_register_ip=#{$ip} AND user_register_time>#{$cut}")
-    count < max ? true : gdt.error(t(:err_ip_signup_max_reached, max))
+    sip = ::GDO::Register::GDO_SignupIP
+    sip.can_activate? ? true : gdt.error(t(:err_ip_signup_max_reached, sip.max))
   end
 
   def validate_unique_username(form, gdt)
-    user = ::GDO::User::GDO_User.find_by_name(gdt._var)
+    user = ::GDO::User::GDO_User.table.find_by_name(gdt._var)
     user == nil ? true : gdt.error(t(:err_username_taken))
   end
 
   def validate_unique_email(form, gdt)
-    count = ::GDO::User::GDO_User::table.count_where("user_email=#{quote(gdt._val)}")
+    count = ::GDO::User::GDO_User::table.count_where("user_email=#{quote(gdt._var)}")
     count == 0 ? true : gdt.error(t(:err_email_taken))
   end
 
@@ -82,17 +77,21 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
   #
   def execute_submit(form)
     mod = ::GDO::Register::Module.instance
-    
-    byebug
-    # TODO: GDT_Password should know it comes from form for a save... b 
-#    $password = $form->getField('user_password');
-#    $password->val(BCrypt::create($password->getVar())->__toString());
 
-    activation = ::GDO::Register::GDO::UserActivation.blank(form.get_form_data)
+    password = form.field(:user_password)
+    password.var(GDO::Crypto::GDT_PasswordHash.hash(password._var))
+    byebug
+
+    activation = ::GDO::Register::GDO_UserActivation.blank(form.get_vars)
+    byebug
+    
+    publish(:gdo_user_signup, activation)
+
     activation.set_var(:user_register_ip, ::GDO::Net::GDT_IP.current)
     activation.save
-    
-    if mod.cfg_email_activation
+    if mod.cfg_admin_activation
+      admin_activation(activation)
+    elsif mod.cfg_email_activation
       email_activation(activation)
     else
       ::GDO::Register::Method::Activate.new.activation(activation)
@@ -107,5 +106,10 @@ class GDO::Register::Method::Form < ::GDO::Method::Form
     mail.send_as_html
     success(t(:msg_activation_mail_sent))
   end
+  
+    def admin_activation(activation)
+      byebug
+    end
+
   
 end

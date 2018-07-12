@@ -3,6 +3,8 @@
 #
 class GDO::Register::GDO_UserActivation < GDO::Core::GDO
   
+  extend ::GDO::Core::WithEvents
+  
   def fields
     [
       ::GDO::DB::GDT_AutoInc.new(:ua_id),
@@ -20,4 +22,8 @@ class GDO::Register::GDO_UserActivation < GDO::Core::GDO
     get_value(:user_name)
   end
   
+  subscribe(:gdo_user_activation, :gdo_activation_cleanup) do |user, activation|
+    table.delete_where("user_name=#{activation.quoted(:user_name)} OR user_email=#{activation.quoted(:user_email)}")
+  end
+
 end

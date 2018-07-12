@@ -1,7 +1,7 @@
 PATH
   remote: ../GDO
   specs:
-    gdo (1.0.0)
+    GDO (1.00)
       bcrypt (~> 3.1)
       mail (~> 2.7)
       mysql2 (~> 0.5)
@@ -11,7 +11,7 @@ PATH
   remote: .
   specs:
     GDO-Register (1.0)
-      gdo (~> 1.0)
+      GDO (~> 1)
 
 GEM
   remote: https://rubygems.org/
@@ -46,10 +46,10 @@ PLATFORMS
   x64-mingw32
 
 DEPENDENCIES
+  GDO!
   GDO-Register!
   bundler (~> 1.16)
   byebug (~> 10.0)
-  gdo!
   rake (~> 10.0)
   rspec (~> 3.0)
 

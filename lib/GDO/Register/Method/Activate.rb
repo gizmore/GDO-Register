@@ -1,5 +1,5 @@
 #
-#
+# 
 #
 class GDO::Register::Method::Activate < GDO::Method::Base
   
@@ -15,11 +15,25 @@ class GDO::Register::Method::Activate < GDO::Method::Base
   end
   
   def activate(id, token)
-    activation ::GDO::Register::GDO_UserActivation.table.select.where("ua_id=#{id} AND ua_token=#{quote(token)}").first.execute.fetch_object
+    activation ::GDO::Register::GDO_UserActivation.table.find_where("ua_id=#{id} AND ua_token=#{quote(token)}")
   end
   
   def activation(activation)
+    
+    publish(:gdo_before_user_activate, activation)
+    
+    # Make user
+    user = ::GDO::User::GDO_User.blank({user_type:"member"}.merge(activation.get_vars)).insert
+    ::GDO::User::GDO_User.current = user
+    
+    # Delete activation
+    activation.delete
+    
+    # Response
     success(t(:msg_activated))
+    
+    # Event
+    publish(:gdo_user_activate, user)
 
   end
   

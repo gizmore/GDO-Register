@@ -21,6 +21,7 @@ class GDO::Register::Module < GDO::Core::GDO_Module
   #
   def tables
     [
+      ::GDO::Register::GDO_SignupIP,
       ::GDO::Register::GDO_UserActivation,
     ]
   end
@@ -52,5 +53,7 @@ class GDO::Register::Module < GDO::Core::GDO_Module
   def cfg_ip_timeout; config_value(:ip_signup_duration); end
   def cfg_ip_signup_max; config_value(:ip_signup_count); end
   def cfg_tos_url; config_value(:register_tos_url); end
+  def cfg_activation_login; config_value(:activation_login); end
+  def cfg_admin_activation; config_value(:admin_activation); end
 
 end
