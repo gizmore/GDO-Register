@@ -44,7 +44,7 @@ class GDO::Register::GDO_SignupIP < GDO::Core::GDO
   end
   
   # Subscription check
-  subscribe(:gdo_before_user_activate, :gdo_activation_ip_check) do |activation|
+  subscribe(:gdo_before_user_activation, :gdo_activation_ip_check) do |activation|
     if !can_activate?
       raise ::GDO::Core::Exception.new(t(:err_ip_signup_max_reached, max))
     end
