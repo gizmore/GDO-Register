@@ -81,6 +81,7 @@ RSpec.describe ::GDO::Register do
     response = ::GDO::Core::Application.response
     form = response._fields[0]
     expect(form.field(:user_name).has_error?).to be(true)
+    expect(form.field(:user_name)._error).to eq("err_ip_signup_max_reached[1]")
   end
 
 end

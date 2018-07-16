@@ -47,11 +47,12 @@ class GDO::Register::Method::Activate < GDO::Method::Base
   private
 
   #
-  # @see 
+  # @see ::GDO::Login::Method::Form
   #  
   def activation_autologin(user)
     ::GDO::Core::Log.info("Autologin #{user.display_name}")
     ::GDO::User::GDO_User.current = user # login
+    success(t(:msg_authenticated)) # response
     publish(:gdo_user_authenticated, user) # event
   end
   
